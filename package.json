@@ -1,0 +1,9 @@
+{
+  "name": "vulnerable-codebase",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Intentionally vulnerable Node.js web app for security testing.",
+  "scripts": {
+    "start": "node server.js"
+  }
+}
