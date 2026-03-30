@@ -13,6 +13,12 @@ const products = [
   { name: "Release Notifier", owner: "platform" }
 ];
 
+// Added function to log request context for search queries, providing insights into user input patterns and potential edge cases
+function logRequestContext(route, details) {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] ${route}`, details);
+}
+
 function layout(title, body) {
   return `<!doctype html>
 <html lang="en">
@@ -92,11 +98,14 @@ function renderSearchPage(query) {
       ? "<li>No matches</li>"
       : matches.map((product) => `<li>${product.name} <small>(${product.owner})</small></li>`).join("");
 
+  const queryMeta = `Query length: ${query.length} characters`;
+    
   return layout(
     "Search Results",
     `<h1>Search Results</h1>
     <p>You searched for: ${query}</p>
     <ul>${results}</ul>
+    <p><small>${queryMeta}</small></p>
     <p><a href="/">Back</a></p>`
   );
 }
@@ -110,14 +119,28 @@ const server = http.createServer((req, res) => {
 
   if (req.method === "GET" && currentUrl.pathname === "/search") {
     const query = currentUrl.searchParams.get("q") || "";
+    // Added logging of search query context for better visibility into user input patterns
+    logRequestContext("search", {
+    queryLength: query.length,
+    hasAngleBrackets: query.includes("<") || query.includes(">"),
+    preview: query.slice(0, 40)
+    });
     return sendHtml(res, 200, renderSearchPage(query));
   }
 
   if (req.method === "GET" && currentUrl.pathname === "/cms/preview") {
     try {
       const requestedView = currentUrl.searchParams.get("view") || "home";
+      logRequestContext("cms-preview", {
+        requestedView,
+        hasEncodedSlash: requestedView.includes("%2f") || requestedView.includes("%2F"),
+        hasDots: requestedView.includes("..")
+      });
+
       const viewName = normalizeViewName(requestedView);
       const template = loadTemplate(viewName);
+
+      const viewMeta = `View key length: ${requestedView.length}`;
 
       return sendHtml(
         res,
@@ -127,6 +150,7 @@ const server = http.createServer((req, res) => {
           `<h1>CMS Preview</h1>
           <p>Rendering view: <code>${requestedView}</code></p>
           <div class="card">${template}</div>
+          <p><small>${viewMeta}</small></p>
           <p><a href="/">Back</a></p>`
         )
       );
